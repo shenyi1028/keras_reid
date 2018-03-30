@@ -25,6 +25,11 @@ from keras.initializers import RandomNormal
 import numpy.linalg as la
 from IPython import embed
 
+# 为了解决 "SSL: CERTIFICATE_VERIFY_FAILED"错误
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+#
+
 #欧式距离 
 def euclidSimilar(query_ind,test_all,top_num):  
     le = len(test_all)
@@ -140,6 +145,11 @@ print('loading data...')
 
 #from load_market_img import get_img
 #query_img,test_img,query_label,test_label=get_img()
+#test_img =preprocess_input(test_img)
+#query_img = preprocess_input(query_img)
+
+from cuhk03dataset import  get_img
+query_img,test_img,query_label,test_label=get_img()
 test_img =preprocess_input(test_img)
 query_img = preprocess_input(query_img)
 
@@ -166,17 +176,25 @@ adam = optimizers.Adam(lr=0.001)
 net.compile(optimizer=adam, loss='categorical_crossentropy',metric ='accuracy')
 
 # your can add a pre-trained model here
-#net.load_weights('net_ide.h5')
-from load_img_data import get_train_img
+net.load_weights('naivehard_more_last.h5')
+#from load_img_data import get_train_img
   
 ind = 0
-while(True):
-    train_img,train_label = get_train_img(8000) #add your loading training data here
-    train_img = preprocess_input(train_img)
-    train_label_onehot = np_utils.to_categorical(train_label,identity_num)
-    net.fit_generator(datagen.flow(train_img, train_label_onehot, batch_size=batch_size),
-                        steps_per_epoch=len(train_img)/batch_size, epochs=1)
-    ind = ind+1
+# while(True):
+    # train_img,train_label = get_train_img(8000) #add your loading training data here
+    # train_img = preprocess_input(train_img)
+    # train_label_onehot = np_utils.to_categorical(train_label,identity_num)
+    # net.fit_generator(datagen.flow(train_img, train_label_onehot, batch_size=batch_size),
+    #                     steps_per_epoch=len(train_img)/batch_size, epochs=1)
+    # ind = ind+1
+print("oops")
     # your can add sth here
     # if np.mod(ind,100) == 0:
+test_feature = feature_model.predict(test_img)
+test_feature = normalize(test_feature)
+query_feature = feature_model.predict(query_img)
+query_feature = normalize(query_feature)
+top1=single_query(query_feature,test_feature,query_label,test_label,test_num=1000)
+# lr = lr*0.9
+# adam = optimizers.adam(lr)
 

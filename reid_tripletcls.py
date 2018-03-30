@@ -12,7 +12,7 @@ import numpy as np
 
 from keras import optimizers
 from keras.utils import np_utils, generic_utils
-from keras.models import Sequential,Model
+from keras.models import Sequential,Model,load_model
 from keras.layers import Dropout, Flatten, Dense,Input
 from keras.applications.resnet50 import ResNet50
 from keras.applications.imagenet_utils import preprocess_input
@@ -22,11 +22,17 @@ from sklearn.preprocessing import normalize
 from keras.preprocessing.image import ImageDataGenerator
 from keras.initializers import RandomNormal
 import tensorflow as tf
+import keras
 
 
 import numpy.linalg as la
 from IPython import embed
 
+
+# 为了解决 "SSL: CERTIFICATE_VERIFY_FAILED"错误
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+#
 
 #欧式距离 
 
@@ -162,7 +168,8 @@ def tf_debug_print(tensor):
 "================================"
 SN = 3
 PN =24
-identity_num = 751
+# identity_num = 751
+identity_num = 6273
 print('loading data...')
 
 # add your loading validation data here
@@ -175,10 +182,12 @@ test_img =preprocess_input(test_img)
 query_img = preprocess_input(query_img)
 
 ''''''''''''''''''''''''''
-datagen = ImageDataGenerator(horizontal_flip=True)
-
-# load pre-trained resnet50
+# datagen = ImageDataGenerator(horizontal_flip=True)
+#
+# # load pre-trained resnet50
 base_model = ResNet50(weights='imagenet', include_top=False, input_tensor=Input(shape=(224,224,3)))
+# base_model = ResNet50()
+# base_model.load_weights('resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5')
 x = base_model.output
 feature = Flatten(name='flatten')(x)
 fc1 = Dropout(0.5)(feature)
@@ -186,34 +195,35 @@ preds = Dense(identity_num, activation='softmax', name='fc8', kernel_initializer
 net = Model(input=base_model.input, output=preds)
 feature_model = Model(input=base_model.input, output=feature)
 class_triplet_model = Model(input=base_model.input, output=[preds,feature])
-#training IDE model for all layers
+# #training IDE model for all layers
 for layer in net.layers:
-   layer.trainable = True
-
-# train
-batch_num = PN
-#adam = optimizers.Adam(lr=0.00001)
+     layer.trainable = True
+#
+# # train
+# batch_num = PN
+# #adam = optimizers.Adam(lr=0.00001)
 lr = 0.001
 adam = optimizers.adam(lr)
-#adam = optimizers.SGD(lr=0.0001,momentum=0.9,decay=0.0005)
+# #adam = optimizers.SGD(lr=0.0001,momentum=0.9,decay=0.0005)
 net.compile(optimizer=adam, loss='categorical_crossentropy',metric ='accuracy')
 class_triplet_model.compile(optimizer=adam,loss=['categorical_crossentropy',triplet_hard_loss],loss_weights=[1.0,1.0])
 # you can load pre-trained model here
-#net.load_weights('triplet_hard_aug_save.h5')
-from load_img_data import get_triplet_data,get_triplet_hard_data
+net.load_weights('naivehard_more_last.h5')
+#from load_img_data import get_triplet_data,get_triplet_hard_data
 from aug import aug_nhw3
 
-while(True):
-    train_img,train_label = get_triplet_data(PN)  #the data in a batch: A1 B1 C1 ...PN1 A2 B2 C2 ... PN2 G K S ... Negative(PN) 
-    train_img,train_label = get_triplet_hard_data(SN,PN) # the data in a batch : A1 A2 A3... ASN B1 B2 B3... BSN ... PN1 PN2 PN3... PNSN
-    train_img = aug_nhw3(train_img)
-    train_img = preprocess_input(train_img)
-    train_label_onehot = np_utils.to_categorical(train_label,identity_num)
-    class_triplet_model.fit(train_img,
-                            y=[train_label_onehot,np.ones([PN*SN,2048])],
-                            shuffle=False,epochs=1,batch_size=PN*SN)  # for triplet loss: SN = 3
-
-    ind = ind+1
+#while(True):
+    # train_img,train_label = get_triplet_data(PN)  #the data in a batch: A1 B1 C1 ...PN1 A2 B2 C2 ... PN2 G K S ... Negative(PN)
+    # train_img,train_label = get_triplet_hard_data(SN,PN) # the data in a batch : A1 A2 A3... ASN B1 B2 B3... BSN ... PN1 PN2 PN3... PNSN
+    # train_img = aug_nhw3(train_img)
+    # train_img = preprocess_input(train_img)
+    # train_label_onehot = np_utils.to_categorical(train_label,identity_num)
+    # class_triplet_model.fit(train_img,
+    #                         y=[train_label_onehot,np.ones([PN*SN,2048])],
+    #                         shuffle=False,epochs=1,batch_size=PN*SN)  # for triplet loss: SN = 3
+    #
+    # ind = ind+1
+print("oops")
     # you can do sth here
     #if np.mod(ind,1000)==0:
        # test_feature = feature_model.predict(test_img)
