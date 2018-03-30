@@ -168,6 +168,9 @@ print('loading data...')
 # add your loading validation data here
 #from load_market_img import get_img
 #query_img,test_img,query_label,test_label=get_img()
+
+from cuhk03dataset import  get_img
+query_img,test_img,query_label,test_label=get_img()
 test_img =preprocess_input(test_img)
 query_img = preprocess_input(query_img)
 
