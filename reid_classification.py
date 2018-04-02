@@ -190,9 +190,9 @@ ind = 0
 print("oops")
     # your can add sth here
     # if np.mod(ind,100) == 0:
-test_feature = feature_model.predict(test_img)
+_,test_feature = net.predict(test_img)  # 输出的是每张图2018维的特征向量
 test_feature = normalize(test_feature)
-query_feature = feature_model.predict(query_img)
+_,query_feature = net.predict(query_img)
 query_feature = normalize(query_feature)
 top1=single_query(query_feature,test_feature,query_label,test_label,test_num=1000)
 # lr = lr*0.9

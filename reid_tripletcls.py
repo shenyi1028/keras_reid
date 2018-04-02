@@ -42,7 +42,8 @@ def euclidSimilar2(query_ind,test_all):
     dis = np.zeros(le)
     for ind in range(le):
         sub = test_all[ind]-query_ind
-        dis[ind] = la.norm(sub)    
+        dis[ind] = la.norm(sub)
+    # print("dis : ",dis)
     ii = sorted(range(len(dis)), key=lambda k: dis[k])
 #    embed()
 #    print(ii[:top_num+1])
@@ -59,27 +60,31 @@ def get_top_ind(query_all,test_all,top_num):
 
 
 def single_query(query_feature,test_feature,query_label,test_label,test_num):
-    test_label_set = np.unique(test_label)
+    test_label_set = np.unique(test_label)  # np.unique() 删除重复的元素，并从大到小返回一个新的元祖或列表
     #single_num = len(test_label_set)
     test_label_dict={}
     topp1=0
     topp5=0
     topp10=0
     for ind in range(len(test_label_set)):
-        test_label_dict[test_label_set[ind]]=np.where(test_label==test_label_set[ind])
+        test_label_dict[test_label_set[ind]]=np.where(test_label==test_label_set[ind])  #
+    # print(test_label_dict)
     for ind in range(test_num):
         query_int = np.random.choice(len(query_label))
-        label = query_label[query_int]        
+        label = query_label[query_int] # 随机取一个query id
+        #print("query ID:",label)
         temp_int = np.random.choice(test_label_dict[label][0],1)
-        temp_gallery_ind = temp_int 
-        for ind2 in range(len(test_label_set)):
+        temp_gallery_ind = temp_int # 当前正确的test id
+        for ind2 in range(len(test_label_set)): # 在每一个人里循环
             temp_label = test_label_set[ind2]
             if temp_label != label:
                 temp_int = np.random.choice(test_label_dict[temp_label][0],1)
                 temp_gallery_ind = np.append(temp_gallery_ind,temp_int)
+        #print("temp_gallery_ind:",temp_gallery_ind)
         single_query_feature =  query_feature[query_int]
         test_all_feature = test_feature[temp_gallery_ind]
         result_ind = euclidSimilar2(single_query_feature,test_all_feature)
+        #print(result_ind)
         query_temp = result_ind.index(0)
         if query_temp<1:
             topp1 = topp1+1
@@ -90,10 +95,11 @@ def single_query(query_feature,test_feature,query_label,test_label,test_num):
     topp1 =topp1/test_num*1.0
     topp5 =topp5/test_num*1.0
     topp10 =topp10/test_num*1.0
-    print('single query')
-    print('top1: '+str(topp1)+'\n')
-    print('top5: '+str(topp5)+'\n')
-    print('top10: '+str(topp10)+'\n')  
+    # print('single query')
+    # print('top1: '+str(topp1)+'\n')
+    # print('top5: '+str(topp5)+'\n')
+    # print('top10: '+str(topp10)+'\n')
+    print('single query'+' top1: '+str(topp1)+' top5: '+str(topp5)+' top10: '+str(topp10))
     return topp1
 "================================"
 
@@ -119,7 +125,7 @@ def triplet_hard_loss(y_true, y_pred):
     feat1 = K.tile(K.expand_dims(y_pred,axis = 0),[feat_num,1,1])
     feat2 = K.tile(K.expand_dims(y_pred,axis = 1),[1,feat_num,1])
     delta = feat1 - feat2
-    dis_mat = K.sum(K.square(delta),axis = 2)
+    dis_mat = K.sum(K.square(delta),axis = 2) + K.epsilon() #
     dis_mat = K.sqrt(dis_mat) + 1e-8 #1e-8 is not necessary
     positive = dis_mat[0:SN,0:SN]
     negetive = dis_mat[0:SN,SN:]
@@ -186,8 +192,6 @@ query_img = preprocess_input(query_img)
 #
 # # load pre-trained resnet50
 base_model = ResNet50(weights='imagenet', include_top=False, input_tensor=Input(shape=(224,224,3)))
-# base_model = ResNet50()
-# base_model.load_weights('resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5')
 x = base_model.output
 feature = Flatten(name='flatten')(x)
 fc1 = Dropout(0.5)(feature)
@@ -200,7 +204,7 @@ for layer in net.layers:
      layer.trainable = True
 #
 # # train
-# batch_num = PN
+batch_num = PN
 # #adam = optimizers.Adam(lr=0.00001)
 lr = 0.001
 adam = optimizers.adam(lr)
@@ -209,27 +213,42 @@ net.compile(optimizer=adam, loss='categorical_crossentropy',metric ='accuracy')
 class_triplet_model.compile(optimizer=adam,loss=['categorical_crossentropy',triplet_hard_loss],loss_weights=[1.0,1.0])
 # you can load pre-trained model here
 net.load_weights('naivehard_more_last.h5')
+class_triplet_model.load_weights('naivehard_more_last.h5')
 #from load_img_data import get_triplet_data,get_triplet_hard_data
 from aug import aug_nhw3
 
-#while(True):
+from cuhk03dataset import  get_triplet_hard_data
+
+ind = 0
+
+while(True):
     # train_img,train_label = get_triplet_data(PN)  #the data in a batch: A1 B1 C1 ...PN1 A2 B2 C2 ... PN2 G K S ... Negative(PN)
-    # train_img,train_label = get_triplet_hard_data(SN,PN) # the data in a batch : A1 A2 A3... ASN B1 B2 B3... BSN ... PN1 PN2 PN3... PNSN
-    # train_img = aug_nhw3(train_img)
-    # train_img = preprocess_input(train_img)
-    # train_label_onehot = np_utils.to_categorical(train_label,identity_num)
-    # class_triplet_model.fit(train_img,
-    #                         y=[train_label_onehot,np.ones([PN*SN,2048])],
-    #                         shuffle=False,epochs=1,batch_size=PN*SN)  # for triplet loss: SN = 3
-    #
-    # ind = ind+1
-print("oops")
+    train_img,train_label = get_triplet_hard_data(SN,PN) # the data in a batch : A1 A2 A3... ASN B1 B2 B3... BSN ... PN1 PN2 PN3... PNSN
+    train_img = aug_nhw3(train_img)
+    train_img = preprocess_input(train_img)
+    train_label_onehot = np_utils.to_categorical(train_label,identity_num)
+    class_triplet_model.fit(train_img,
+                             y=[train_label_onehot,np.ones([PN*SN,2048])],
+                             shuffle=False,epochs=1,batch_size=PN*SN)  # for triplet loss: SN = 3
+
+    ind = ind+1
+
+    best = 0.55
     # you can do sth here
-    #if np.mod(ind,1000)==0:
-       # test_feature = feature_model.predict(test_img)
-       # test_feature = normalize(test_feature)
-       # query_feature = feature_model.predict(query_img)
-       # query_feature = normalize(query_feature)
-       # top1=single_query(query_feature,test_feature,query_label,test_label,test_num=1000)
+    if np.mod(ind,1)==0:
+        print("Round"+str(ind)+":")
+        # test_feature = feature_model.predict(test_img)
+        _,test_feature = class_triplet_model.predict(test_img) # [_,2048]
+        test_feature = normalize(test_feature)
+        # print(len(test_feature[0]))
+        # query_feature = feature_model.predict(query_img)
+        _,query_feature = class_triplet_model.predict(query_img)
+        query_feature = normalize(query_feature)
+        top1=single_query(query_feature,test_feature,query_label,test_label,test_num=1000)
+        if(top1>best):
+            best = top1
+            class_triplet_model.save("best_"+str(best)+"_round"+str(ind)+".h5")
+            class_triplet_model.save_weights("best_"+str(best)+"_round"+str(ind)+"_weights.h5")
+            print("save successfully!")
        # lr = lr*0.9
        # adam = optimizers.adam(lr)
